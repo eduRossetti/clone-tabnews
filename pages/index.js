@@ -2,11 +2,12 @@ import styles from "./index.module.css";
 
 function Home() {
   return (
-    <div className={styles.container}>
-      <div className={styles.header}>
+    <main className={styles.container}>
+      <header className={styles.header}>
         <h1 className={styles.titulo}>Nem tudo na vida é simples.</h1>
-      </div>
-      <div className={styles.containerTxt}>
+      </header>
+
+      <section className={styles.containerTxt}>
         <p className={styles.texto}>
           Este site está em <strong>desenvolvimento</strong> e tem como objetivo
           criar um espaço para discutir{" "}
@@ -15,30 +16,24 @@ function Home() {
         </p>
 
         <p className={styles.texto}>
-          Aqui, a ideia não é <strong>convencer</strong>, mas
-          <strong> argumentar, ouvir e refletir</strong>. As discussões serão
-          avaliadas pelos proprios usuarios com um <i>sistema de pontos</i>,
-          pela
+          Aqui, a ideia não é <strong>convencer</strong>, mas{" "}
+          <strong>argumentar, ouvir e refletir</strong>. As discussões serão
+          avaliadas pelos proprios usuarios com um <i>sistema de pontos</i>, pela{" "}
           <span className={styles.destaque}>
-            <strong> clareza e qualidade dos argumentos</strong>
+            <strong>clareza e qualidade dos argumentos</strong>
           </span>
           , <strong>não pela popularidade das opiniões</strong>.
         </p>
-      </div>
-      <br />
-      <br />
-      <br />
-      <br />
-      <div className={styles.status}>
+      </section>
+
+      <div className={styles.spacer} />
+
+      <section className={styles.status} aria-label="Status do site">
         <p className={styles.texto}>
-          🚧
-          <strong>
-            <i> Status</i>
-          </strong>
-          : em construção
+          🚧 <strong><i>Status</i></strong>: em construção
         </p>
-      </div>
-    </div>
+      </section>
+    </main>
   );
 }
 

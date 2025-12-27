@@ -18,7 +18,8 @@ function Home() {
         <p className={styles.texto}>
           Aqui, a ideia não é <strong>convencer</strong>, mas{" "}
           <strong>argumentar, ouvir e refletir</strong>. As discussões serão
-          avaliadas pelos proprios usuarios com um <i>sistema de pontos</i>, pela{" "}
+          avaliadas pelos proprios usuarios com um <i>sistema de pontos</i>,
+          pela{" "}
           <span className={styles.destaque}>
             <strong>clareza e qualidade dos argumentos</strong>
           </span>
@@ -30,7 +31,11 @@ function Home() {
 
       <section className={styles.status} aria-label="Status do site">
         <p className={styles.texto}>
-          🚧 <strong><i>Status</i></strong>: em construção
+          🚧{" "}
+          <strong>
+            <i>Status</i>
+          </strong>
+          : em construção
         </p>
       </section>
     </main>

@@ -1,9 +1,29 @@
 import database from "infra/database.js";
 
 async function status(request, response) {
-  const result = await database.query("SELECT 1+ 1 as sum;");
-  console.log(result.rows);
-  response.status(200).json({ chave: "alunos curso.dev são acima da media" });
+  const updatedAt = new Date().toISOString();
+
+  let result = await database.query("SELECT version();");
+  const splitedResultDb = result.rows[0].version.split(" ");
+  const dbVersion = splitedResultDb[1];
+  //pegando a versão do banco e colocando em String
+
+  result = await database.query("SELECT current_setting('max_connections');");
+  const maxConnections = result.rows[0].current_setting;
+  //pegando o numero de conexões maximas
+
+  result = await database.query("SELECT COUNT(*) FROM pg_stat_activity;");
+  const usedConnections = result.rows[0].count;
+  
+
+  response.status(200).json({
+    updated_at: updatedAt,
+    database: {
+      db_version: dbVersion,
+      max_connections: maxConnections,
+      used_connections: usedConnections,
+    },
+  });
 }
 
 export default status;

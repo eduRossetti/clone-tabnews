@@ -10,7 +10,7 @@ test("GET to /api/v1/status shoud return 200", async () => {
 
   const dbVersion = responseBody.database.db_version;
   expect(dbVersion).toBeDefined();
-  expect(typeof dbVersion).toBe("string");
+  expect(typeof dbVersion).toBe("number");
   expect(Number.isNaN(parseFloat(dbVersion))).toBe(false);
 
   const maxConnections = responseBody.database.max_connections;

@@ -5,7 +5,7 @@ async function status(request, response) {
 
   let result = await database.query("SELECT version();");
   const splitedResultDb = result.rows[0].version.split(" ");
-  const dbVersion = splitedResultDb[1];
+  const dbVersion = parseFloat(splitedResultDb[1]);
   //pegando a versão do banco e colocando em String
 
   result = await database.query("SELECT current_setting('max_connections');");

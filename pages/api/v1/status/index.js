@@ -9,11 +9,11 @@ async function status(request, response) {
   //pegando a versão do banco e colocando em String
 
   result = await database.query("SELECT current_setting('max_connections');");
-  const maxConnections = result.rows[0].current_setting;
+  const maxConnections = parseFloat(result.rows[0].current_setting);
   //pegando o numero de conexões maximas
 
   result = await database.query("SELECT COUNT(*) FROM pg_stat_activity;");
-  const usedConnections = result.rows[0].count;
+  const usedConnections = parseFloat(result.rows[0].count);
   
 
   response.status(200).json({

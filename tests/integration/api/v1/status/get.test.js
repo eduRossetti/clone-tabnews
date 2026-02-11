@@ -8,20 +8,20 @@ test("GET to /api/v1/status shoud return 200", async () => {
   const parsedUpdatedAt = new Date(responseBody.updated_at).toISOString();
   expect(responseBody.updated_at).toEqual(parsedUpdatedAt);
 
-  const dbVersion = responseBody.database.db_version;
-  expect(dbVersion).toBeDefined();
-  expect(typeof dbVersion).toBe("number");
-  expect(Number.isNaN(parseFloat(dbVersion))).toBe(false);
+  const version = responseBody.dependencies.database.version;
+  expect(version).toBeDefined();
+  expect(typeof version).toBe("string");
+  expect(Number.isNaN(parseFloat(version))).toBe(false);
+  expect(version).toBe("16.0");
 
-  const maxConnections = responseBody.database.max_connections;
+  const maxConnections = responseBody.dependencies.database.max_connections;
   expect(maxConnections).toBeDefined();
   expect(typeof maxConnections).toBe("number");
-  expect(Number.isNaN(parseFloat(maxConnections))).toBe(false);
+  expect(Number.isNaN(maxConnections)).toBe(false);
+  expect(maxConnections).toBe(100);
 
-  const usedConnections = responseBody.database.used_connections;
+  const usedConnections = responseBody.dependencies.database.used_connections;
   expect(usedConnections).toBeDefined();
   expect(typeof usedConnections).toBe("number");
-  expect(Number.isNaN(parseFloat(usedConnections))).toBe(false);
-
-  console.log(responseBody.database);
+  expect(Number.isNaN(usedConnections)).toBe(false);
 });

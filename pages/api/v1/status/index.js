@@ -5,6 +5,7 @@ async function status(request, response) {
 
   let databaseVersionResult = await database.query("SHOW server_version;");
   const databaseVersionValue = databaseVersionResult.rows[0].server_version;
+
   //pegando a versão do banco e colocando em String
 
   const databaseMaxConnectionsResult = await database.query(
@@ -12,12 +13,13 @@ async function status(request, response) {
   );
   const databaseMaxConnectionsValue =
     databaseMaxConnectionsResult.rows[0].current_setting;
-
   //pegando o numero de conexões maximas
 
-  const databaseUsedConnectionsResult = await database.query(
-    "SELECT COUNT(*) FROM pg_stat_activity;",
-  );
+  const databaseName = process.env.POSTGRES_DB;
+  const databaseUsedConnectionsResult = await database.query({
+    text: "SELECT count(*)::int FROM pg_stat_activity WHERE datname = $1;",
+    values: [databaseName],
+  });
   const databaseUsedConnectionsValue =
     databaseUsedConnectionsResult.rows[0].count;
 
@@ -27,7 +29,7 @@ async function status(request, response) {
       database: {
         version: databaseVersionValue,
         max_connections: parseInt(databaseMaxConnectionsValue),
-        used_connections: parseInt(databaseUsedConnectionsValue),
+        used_connections: databaseUsedConnectionsValue,
       },
     },
   });

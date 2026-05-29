@@ -19,14 +19,6 @@ async function query(queryObject) {
   }
 }
 
-function getSSLValues() {
-  if (process.env.POSTGRES_CA) {
-    return {
-      ca: process.env.POSTGRES_CA,
-    };
-  }
-}
-
 async function getNewClient(){
   const client = new Client({
     host: process.env.POSTGRES_HOST,
@@ -45,3 +37,13 @@ export default {
   query,
   getNewClient,
 };
+
+function getSSLValues() {
+  if (process.env.POSTGRES_CA) {
+    return {
+      ca: process.env.POSTGRES_CA,
+    };
+  }
+  
+  return process.env.NODE_ENV === "production" ? true : false;
+}

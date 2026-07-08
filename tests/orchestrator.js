@@ -19,6 +19,8 @@ async function waitForAllServices() {
   }
 }
 
-export default {
+const orhcestrator = {
   waitForAllServices,
 };
+
+export default orhcestrator;

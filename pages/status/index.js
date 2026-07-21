@@ -14,8 +14,29 @@ export default function StatusPage() {
   return (
     <>
       <h1>Status</h1>
+      <UpdatedAt />
       <DatabaseStatus />
     </>
+  );
+}
+
+function UpdatedAt() {
+  const { isLoading, data, error } = useSWR("/api/v1/status", fetchStatus, {
+    refreshInterval: 2000,
+  });
+
+  let updatedAt = "Carregando...";
+
+  if (error) return <div>Erro ao carregar informações!</div>;
+
+  if (!isLoading && data) {
+    updatedAt = new Date(data.updated_at).toLocaleString("pt-BR");
+  }
+
+  return (
+    <div>
+      <span>Ultima Atualização: {updatedAt}</span>
+    </div>
   );
 }
 
@@ -24,15 +45,13 @@ function DatabaseStatus() {
     refreshInterval: 2000,
   });
 
-  if (error) return <div>Erro ao carregar informações!</div>;
+  if (error) return <div>Erro ao carregar informações do database!</div>;
 
-  let updatedAtText = "Carregando...";
   let maxConnectionsText = "Carregando";
   let usedConnectionsText = "Carregando";
   let versionText = "Carregando";
 
   if (!isLoading && data) {
-    updatedAtText = new Date(data.updated_at).toLocaleString("pt-BR");
     maxConnectionsText = data.dependencies.database.max_connections;
     usedConnectionsText = data.dependencies.database.used_connections;
     versionText = data.dependencies.database.version;
@@ -40,7 +59,7 @@ function DatabaseStatus() {
 
   return (
     <div>
-      <span>Ultima atualização: {updatedAtText}</span> <br />
+      <h2>Database:</h2>
       <span>Versão do Postgres: {versionText}</span> <br />
       <span>Conexões usadas: {usedConnectionsText}</span> <br />
       <span>Maximo de conexões: {maxConnectionsText}</span>

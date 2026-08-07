@@ -3,12 +3,12 @@ import { InternalServerError, MethodNotAllowledError } from "infra/errors";
 
 function onErrorHandler(error, request, response) {
   const publicErrorObject = new InternalServerError({
+    statusCode: error.statusCode,
     cause: error,
   });
-  console.log("\n Erro dentro do catch do next-connect:");
   console.error(publicErrorObject);
 
-  response.status(500).json(publicErrorObject);
+  response.status(publicErrorObject.statusCode).json(publicErrorObject);
 }
 
 function onNoMatchHandler(request, response) {

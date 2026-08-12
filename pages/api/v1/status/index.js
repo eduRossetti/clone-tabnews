@@ -12,4 +12,3 @@ async function getHandler(request, response) {
   const systemStatus = await status.getStatus();
   return response.status(200).json(systemStatus);
 }
-

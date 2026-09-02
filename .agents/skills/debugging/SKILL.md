@@ -96,6 +96,28 @@ curl http://localhost:3000/api/v1/status  # Next.js respondendo?
 
 ---
 
+## 🧱 Padrão de Erros Customizados (`infra/errors.js`)
+
+A fonte da verdade para erros é [`infra/errors.js`](file:///home/eduardorossetti/projetos/clone-tabnews/infra/errors.js).
+
+### Regras do Contrato de Erros:
+1. **Estrutura Obrigatória**: Toda classe de erro customizada deve estender `Error` e implementar:
+   - `name`: Nome da classe (ex: `ValidationError`, `ServiceError`).
+   - `message`: Mensagem amigável explicando o que falhou.
+   - `action`: Mensagem acionável orientando quem consumiu a API a corrigir a chamada.
+   - `statusCode`: Código HTTP correspondente (4xx para cliente, 5xx para servidor).
+   - `toJSON()`: Método serializador retornando `{ name, message, action, statusCode }`.
+   - `cause`: Aceitar no construtor para preservar o erro original encadeado (`super(message, { cause })`).
+
+2. **Fluxo no Controller (`infra/controller.js`)**:
+   - Erros não tratados caem no `onErrorHandler`, que loga o erro completo e encapsula a falha real em `error.cause`.
+   - **Ao debugar erros 500 no terminal, verifique sempre `error.cause`** para encontrar o ponto exato da falha.
+
+3. **Para usar ou criar novos erros**:
+   - Sempre consulte [`infra/errors.js`](file:///home/eduardorossetti/projetos/clone-tabnews/infra/errors.js) antes de instanciar ou criar uma nova classe de erro para manter a consistência do sistema.
+
+---
+
 ## Como Ler um Stack Trace do Node.js
 
 Dado este stack trace de exemplo:

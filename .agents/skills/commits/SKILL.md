@@ -68,6 +68,29 @@ tipo_em_ingles(escopo_opcional): descricao_em_portugues_no_imperativo
 
 ---
 
+## 🛡️ Checklist Obrigatório Pré-Commit (Garantia de CI/CD)
+
+Antes de executar QUALQUER `git commit` ou criar commit via ferramenta/agente, execute **sempre** o checklist abaixo para garantir que o pipeline de CI no GitHub Actions (`.github/workflows/linting.yaml`) nunca quebre:
+
+```bash
+# 1. Formata todos os arquivos do repositório
+npm run lint:prettier:fix
+
+# 2. Garante que nenhum arquivo ficou fora do padrão do Prettier
+npm run lint:prettier:check
+
+# 3. Garante que o ESLint passa sem erros
+npm run lint:eslint:check
+
+# 4. Valida a mensagem pretendida no Commitlint
+echo "type(scope): mensagem em portugues no imperativo" | npx commitlint
+```
+
+> [!CAUTION]
+> O CI do GitHub executa `prettier --check .` em **todos** os arquivos do repositório (incluindo `.agents/`, `.github/`, markdown e configs). Se um arquivo for editado ou formatado fora do Prettier, o CI quebra imediatamente. Nunca descarte alterações de formatação de arquivos geradas pelo Prettier.
+
+---
+
 ## ⚠️ Regras Cruciais para NÃO quebrar o Commitlint
 
 1. **Descrição em letras minúsculas**:

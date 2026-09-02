@@ -101,6 +101,7 @@ curl http://localhost:3000/api/v1/status  # Next.js respondendo?
 A fonte da verdade para erros é [`infra/errors.js`](file:///home/eduardorossetti/projetos/clone-tabnews/infra/errors.js).
 
 ### Regras do Contrato de Erros:
+
 1. **Estrutura Obrigatória**: Toda classe de erro customizada deve estender `Error` e implementar:
    - `name`: Nome da classe (ex: `ValidationError`, `ServiceError`).
    - `message`: Mensagem amigável explicando o que falhou.

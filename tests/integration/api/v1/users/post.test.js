@@ -56,5 +56,96 @@ describe("POST /api/v1/users", () => {
       expect(userRow.email).toBe("validuser@example.com");
       expect(userRow.password).toBe("validpassword");
     });
+    test("With duplicated email", async () => {
+      const response = await fetch("http://localhost:3000/api/v1/users", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          username: "validuser2",
+          email: "validuser@example.com",
+          password: "validpassword",
+        }),
+      });
+      expect(response.status).toBe(400);
+
+      const responseBody = await response.json();
+      expect(responseBody).toEqual({
+        name: "ValidationError",
+        message: "O email informado já está sendo utilizado.",
+        action: "Ajuste os dados e tente novamente.",
+        status_code: 400,
+      });
+    });
+
+    test("With duplicated username", async () => {
+      const response = await fetch("http://localhost:3000/api/v1/users", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          username: "validuser",
+          email: "validuser2@example.com",
+          password: "validpassword",
+        }),
+      });
+      expect(response.status).toBe(400);
+
+      const responseBody = await response.json();
+      expect(responseBody).toEqual({
+        name: "ValidationError",
+        message: "O username informado já está sendo utilizado.",
+        action: "Ajuste os dados e tente novamente.",
+        status_code: 400,
+      });
+    });
+
+    test("With duplicated email in different case", async () => {
+      const response = await fetch("http://localhost:3000/api/v1/users", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          username: "validuser_different_case",
+          email: "ValidUser@Example.com",
+          password: "validpassword",
+        }),
+      });
+      expect(response.status).toBe(400);
+
+      const responseBody = await response.json();
+      expect(responseBody).toEqual({
+        name: "ValidationError",
+        message: "O email informado já está sendo utilizado.",
+        action: "Ajuste os dados e tente novamente.",
+        status_code: 400,
+      });
+    });
+
+    test("With duplicated username in different case", async () => {
+      const response = await fetch("http://localhost:3000/api/v1/users", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          username: "ValidUser",
+          email: "validuser_different_case@example.com",
+          password: "validpassword",
+        }),
+      });
+      expect(response.status).toBe(400);
+
+      const responseBody = await response.json();
+      expect(responseBody).toEqual({
+        name: "ValidationError",
+        message: "O username informado já está sendo utilizado.",
+        action: "Ajuste os dados e tente novamente.",
+        status_code: 400,
+      });
+    });
   });
 });

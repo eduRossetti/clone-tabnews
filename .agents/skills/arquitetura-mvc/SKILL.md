@@ -19,9 +19,10 @@ adaptada para o Next.js. A separação não é imposta pelo framework — ela é
 ### 🔵 Model — `models/`
 
 - **Responsabilidade**: Toda a lógica relacionada a dados e regras de negócio.
-- **O que faz**: queries SQL, validações de dados, cálculos, acesso ao banco.
+- **O que faz**: queries SQL, validações de dados, normalização/sanitização de dados (ex: `toLowerCase()`), cálculos, acesso ao banco.
 - **O que NÃO faz**: não conhece `request`/`response` HTTP, não renderiza HTML.
 - **Arquivos existentes**:
+  - [`models/user.js`](file:///home/eduardorossetti/projetos/clone-tabnews/models/user.js) — gerencia criação, regras de negócio e validações de usuários.
   - [`models/status.js`](file:///home/eduardorossetti/projetos/clone-tabnews/models/status.js) — consulta versão, conexões e status do banco.
   - [`models/migrator.js`](file:///home/eduardorossetti/projetos/clone-tabnews/models/migrator.js) — gerencia migrações do banco de dados.
 

@@ -94,6 +94,23 @@ await database.query({
 > await database.query(`SELECT * FROM users WHERE name = '${userName}'`);
 > ```
 
+### Normalização de Dados e Unicidade (Case-Insensitive):
+
+No PostgreSQL, comparações de string e constraints `UNIQUE` (`varchar`) são por padrão **Case-Sensitive** (diferenciam maiúsculas de minúsculas).
+Se um usuário cadastrar `teste@teste.com` e outro `Teste@teste.com`, o banco permitiria a inserção se os dados não fossem normalizados, criando duplicidades lógicas.
+
+**Regras obrigatórias:**
+
+1. **Normalizar antes de persistir:** Campos de identificação como `email` e `username` devem sempre ser convertidos para minúsculo (`.toLowerCase()`) no Model antes da validação e da persistência.
+2. **Consultas com `LOWER()`:** Em verificações de duplicidade/unicidade, sempre utilize `LOWER(coluna) = LOWER($1)` na query para garantir consistência:
+
+```js
+await database.query({
+  text: "SELECT email FROM users WHERE LOWER(email) = LOWER($1);",
+  values: [cleanEmail],
+});
+```
+
 ---
 
 ## Migrations

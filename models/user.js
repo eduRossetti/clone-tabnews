@@ -24,6 +24,28 @@ async function create(userInputValues) {
   return results.rows[0];
 }
 
+async function findOneByUsername(username) {
+  const cleanUsername = username?.toLowerCase();
+
+  const results = await database.query({
+    text: `
+    SELECT
+      id,
+      username,
+      email,
+      created_at,
+      updated_at
+    FROM
+      users
+    WHERE
+      LOWER(username) = $1;
+    `,
+    values: [cleanUsername],
+  });
+
+  return results.rows[0];
+}
+
 async function validateUniqueUsername(username) {
   const results = await database.query({
     text: `
@@ -68,6 +90,7 @@ async function validateUniqueEmail(email) {
 
 const user = {
   create,
+  findOneByUsername,
 };
 
 export default user;

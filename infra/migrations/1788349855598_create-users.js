@@ -16,7 +16,7 @@ export const up = (pgm) => {
       unique: true,
     },
     password: {
-      type: "varchar(72)",
+      type: "varchar(60)",
       notNull: true,
     },
     created_at: {

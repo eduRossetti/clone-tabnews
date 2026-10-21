@@ -1,12 +1,12 @@
 import { runner as migrationRunner } from "node-pg-migrate";
-import { join } from "node:path";
+import { resolve } from "node:path";
 import database from "infra/database";
 import { ServiceError } from "infra/errors.js";
 
 const defaultMigrationsOptions = {
   databaseUrl: process.env.DATABASE_URL, // credenciais de acesso do banco
   dryRun: true, // se vai rodar de verdade ou só vai testar o que rodaria
-  dir: join("infra", "migrations"), //caminho de onde estão as migrations
+  dir: resolve(process.cwd(), "infra", "migrations"), //caminho de onde estão as migrations
   direction: "up",
   verbose: true, //mostra mais informações(SQL) sobre as migrations quando executada
   migrationsTable: "pgmigrations", //qual tabela vai ser usada pra controlar as migrations

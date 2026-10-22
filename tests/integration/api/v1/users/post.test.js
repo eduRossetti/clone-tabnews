@@ -1,3 +1,4 @@
+import bcrypt from "bcrypt";
 import database from "infra/database.js";
 import orchestrator from "tests/orchestrator.js";
 import { version as uuidVersion } from "uuid";
@@ -29,10 +30,10 @@ describe("POST /api/v1/users", () => {
         id: responseBody.id,
         username: "validuser",
         email: "validuser@example.com",
-        password: "validpassword",
         created_at: responseBody.created_at,
         updated_at: responseBody.updated_at,
       });
+      expect(responseBody).not.toHaveProperty("password");
 
       expect(uuidVersion(responseBody.id)).toEqual(4);
       expect(responseBody.created_at).toBeDefined();
@@ -54,7 +55,103 @@ describe("POST /api/v1/users", () => {
       expect(userRow.id).toBe(responseBody.id);
       expect(userRow.username).toBe("validuser");
       expect(userRow.email).toBe("validuser@example.com");
-      expect(userRow.password).toBe("validpassword");
+      expect(userRow.password).not.toBe("validpassword");
+      expect(userRow.password).toHaveLength(60);
+      expect(bcrypt.getRounds(userRow.password)).toBe(14);
+      expect(await bcrypt.compare("validpassword", userRow.password)).toBe(
+        true,
+      );
+      expect(await bcrypt.compare("wrongpassword", userRow.password)).toBe(
+        false,
+      );
+    });
+
+    test("With the same password for different users", async () => {
+      const hashes = [];
+
+      for (const username of ["samepassword1", "samepassword2"]) {
+        const response = await createUser(username, "sharedpassword");
+        expect(response.status).toBe(201);
+        const responseBody = await response.json();
+        expect(responseBody).not.toHaveProperty("password");
+
+        const result = await database.query({
+          text: "SELECT password FROM users WHERE id = $1;",
+          values: [responseBody.id],
+        });
+        const hash = result.rows[0].password;
+        expect(bcrypt.getRounds(hash)).toBe(14);
+        expect(await bcrypt.compare("sharedpassword", hash)).toBe(true);
+        hashes.push(hash);
+      }
+
+      expect(hashes[0]).not.toBe(hashes[1]);
+    });
+
+    test("Preserving password case and spaces", async () => {
+      const originalPassword = "  MixedCase Password  ";
+      const response = await createUser("exactpassword", originalPassword);
+      expect(response.status).toBe(201);
+      const responseBody = await response.json();
+      const result = await database.query({
+        text: "SELECT password FROM users WHERE id = $1;",
+        values: [responseBody.id],
+      });
+      const hash = result.rows[0].password;
+
+      expect(await bcrypt.compare(originalPassword, hash)).toBe(true);
+      expect(await bcrypt.compare(originalPassword.toLowerCase(), hash)).toBe(
+        false,
+      );
+      expect(await bcrypt.compare(originalPassword.trim(), hash)).toBe(false);
+    });
+
+    test.each([
+      ["ASCII", "a".repeat(72)],
+      ["multibyte", "🔑".repeat(18)],
+    ])("With a 72-byte %s password", async (label, inputPassword) => {
+      expect(Buffer.byteLength(inputPassword, "utf8")).toBe(72);
+      const response = await createUser(`boundary_${label}`, inputPassword);
+      expect(response.status).toBe(201);
+      const responseBody = await response.json();
+      expect(responseBody).not.toHaveProperty("password");
+
+      const result = await database.query({
+        text: "SELECT password FROM users WHERE id = $1;",
+        values: [responseBody.id],
+      });
+      expect(bcrypt.getRounds(result.rows[0].password)).toBe(14);
+      expect(await bcrypt.compare(inputPassword, result.rows[0].password)).toBe(
+        true,
+      );
+    });
+
+    test.each([
+      ["missing", undefined],
+      ["null", null],
+      ["empty", ""],
+      ["number", 12345],
+      ["boolean", true],
+      ["object", {}],
+      ["array", ["password"]],
+      ["long_ascii", "a".repeat(73)],
+      ["long_multibyte", "🔑".repeat(18) + "a"],
+    ])("With an invalid %s password", async (label, inputPassword) => {
+      const username = `invalid_${label}`;
+      const response = await createUser(username, inputPassword);
+      expect(response.status).toBe(400);
+      expect(await response.json()).toEqual({
+        name: "ValidationError",
+        message: "A senha deve ser uma string não vazia de até 72 bytes.",
+        action: "Informe uma senha válida e tente novamente.",
+        status_code: 400,
+      });
+
+      const result = await database.query({
+        text: "SELECT id FROM users WHERE username = $1;",
+        values: [username],
+      });
+      expect(result.rowCount).toBe(0);
     });
     test("With duplicated email", async () => {
       const response = await fetch("http://localhost:3000/api/v1/users", {
@@ -149,3 +246,15 @@ describe("POST /api/v1/users", () => {
     });
   });
 });
+
+async function createUser(username, password) {
+  return fetch("http://localhost:3000/api/v1/users", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      username,
+      email: `${username}@example.com`,
+      password,
+    }),
+  });
+}

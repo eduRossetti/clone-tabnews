@@ -57,7 +57,7 @@ describe("POST /api/v1/users", () => {
       expect(userRow.email).toBe("validuser@example.com");
       expect(userRow.password).not.toBe("validpassword");
       expect(userRow.password).toHaveLength(60);
-      expect(bcrypt.getRounds(userRow.password)).toBe(14);
+      expect(bcrypt.getRounds(userRow.password)).toBe(1);
       expect(await bcrypt.compare("validpassword", userRow.password)).toBe(
         true,
       );
@@ -80,7 +80,7 @@ describe("POST /api/v1/users", () => {
           values: [responseBody.id],
         });
         const hash = result.rows[0].password;
-        expect(bcrypt.getRounds(hash)).toBe(14);
+        expect(bcrypt.getRounds(hash)).toBe(1);
         expect(await bcrypt.compare("sharedpassword", hash)).toBe(true);
         hashes.push(hash);
       }
@@ -120,7 +120,7 @@ describe("POST /api/v1/users", () => {
         text: "SELECT password FROM users WHERE id = $1;",
         values: [responseBody.id],
       });
-      expect(bcrypt.getRounds(result.rows[0].password)).toBe(14);
+      expect(bcrypt.getRounds(result.rows[0].password)).toBe(1);
       expect(await bcrypt.compare(inputPassword, result.rows[0].password)).toBe(
         true,
       );

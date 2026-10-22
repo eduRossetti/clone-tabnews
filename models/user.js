@@ -1,6 +1,6 @@
 import database from "infra/database.js";
 import { ValidationError } from "infra/errors.js";
-import bcrypt from "bcrypt";
+import password from "models/password.js";
 
 async function create(userInputValues) {
   const cleanUsername = userInputValues.username?.toLowerCase();
@@ -9,7 +9,7 @@ async function create(userInputValues) {
   await validateUniqueUsername(cleanUsername);
   await validateUniqueEmail(cleanEmail);
 
-  const hashedPassword = await hashPassword(userInputValues.password);
+  const hashedPassword = await password.hash(userInputValues.password);
 
   const results = await database.query({
     text: `
@@ -88,21 +88,6 @@ async function validateUniqueEmail(email) {
       action: "Ajuste os dados e tente novamente.",
     });
   }
-}
-
-async function hashPassword(rawPassword) {
-  if (
-    typeof rawPassword !== "string" ||
-    rawPassword.length === 0 ||
-    Buffer.byteLength(rawPassword, "utf8") > 72
-  ) {
-    throw new ValidationError({
-      message: "A senha deve ser uma string não vazia de até 72 bytes.",
-      action: "Informe uma senha válida e tente novamente.",
-    });
-  }
-
-  return bcrypt.hash(rawPassword, 14);
 }
 
 const user = {

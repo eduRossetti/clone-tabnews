@@ -1,13 +1,15 @@
 import database from "infra/database.js";
 import { ValidationError } from "infra/errors.js";
+import bcrypt from "bcrypt";
 
 async function create(userInputValues) {
   const cleanUsername = userInputValues.username?.toLowerCase();
   const cleanEmail = userInputValues.email?.toLowerCase();
-  const cleanPassword = userInputValues.password;
 
   await validateUniqueUsername(cleanUsername);
   await validateUniqueEmail(cleanEmail);
+
+  const hashedPassword = await hashPassword(userInputValues.password);
 
   const results = await database.query({
     text: `
@@ -18,7 +20,7 @@ async function create(userInputValues) {
       RETURNING
         *;
     `,
-    values: [cleanUsername, cleanEmail, cleanPassword],
+    values: [cleanUsername, cleanEmail, hashedPassword],
   });
 
   return results.rows[0];
@@ -86,6 +88,21 @@ async function validateUniqueEmail(email) {
       action: "Ajuste os dados e tente novamente.",
     });
   }
+}
+
+async function hashPassword(rawPassword) {
+  if (
+    typeof rawPassword !== "string" ||
+    rawPassword.length === 0 ||
+    Buffer.byteLength(rawPassword, "utf8") > 72
+  ) {
+    throw new ValidationError({
+      message: "A senha deve ser uma string não vazia de até 72 bytes.",
+      action: "Informe uma senha válida e tente novamente.",
+    });
+  }
+
+  return bcrypt.hash(rawPassword, 14);
 }
 
 const user = {

@@ -1,7 +1,8 @@
 import bcrypt from "bcrypt";
 import { ValidationError } from "infra/errors.js";
 
-const saltRounds = process.env.NODE_ENV === "production" ? 14 : 1;
+// Bcrypt requires a minimum cost of 4; use it outside production for faster tests.
+const saltRounds = process.env.NODE_ENV === "production" ? 14 : 4;
 
 async function hash(rawPassword) {
   if (

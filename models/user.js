@@ -1,5 +1,5 @@
 import database from "infra/database.js";
-import { ValidationError } from "infra/errors.js";
+import { NotFoundError, ValidationError } from "infra/errors.js";
 import password from "models/password.js";
 
 async function create(userInputValues) {
@@ -48,7 +48,64 @@ async function findOneByUsername(username) {
   return results.rows[0];
 }
 
-async function validateUniqueUsername(username) {
+async function updateUsername(currentUsername, userInputValues) {
+  const existingUser = await findOneByUsername(currentUsername);
+
+  if (!existingUser) {
+    throw new NotFoundError({
+      message: `O usuário "${currentUsername}" não foi encontrado.`,
+      action: "Verifique se o nome de usuário está digitado corretamente.",
+    });
+  }
+
+  const username = userInputValues?.username;
+  const cleanUsername =
+    typeof username === "string" ? username.toLowerCase() : undefined;
+
+  if (
+    !cleanUsername ||
+    !cleanUsername.trim() ||
+    [...cleanUsername].length > 30
+  ) {
+    throw new ValidationError({
+      message: "O username deve ser uma string não vazia de até 30 caracteres.",
+      action: "Informe um username válido e tente novamente.",
+    });
+  }
+
+  await validateUniqueUsername(cleanUsername, existingUser.id);
+
+  try {
+    const results = await database.query({
+      text: `
+        UPDATE users
+        SET username = $1, updated_at = now()
+        WHERE id = $2
+        RETURNING id, username, email, created_at, updated_at;
+      `,
+      values: [cleanUsername, existingUser.id],
+    });
+
+    return results.rows[0];
+  } catch (error) {
+    if (
+      error.cause?.code === "23505" &&
+      error.cause?.constraint === "users_username_key"
+    ) {
+      throw usernameAlreadyInUse();
+    }
+    throw error;
+  }
+}
+
+function usernameAlreadyInUse() {
+  return new ValidationError({
+    message: "O username informado já está sendo utilizado.",
+    action: "Ajuste os dados e tente novamente.",
+  });
+}
+
+async function validateUniqueUsername(username, excludedUserId = null) {
   const results = await database.query({
     text: `
       SELECT
@@ -56,16 +113,14 @@ async function validateUniqueUsername(username) {
       FROM
         users
       WHERE
-        LOWER(username) = LOWER($1);
+        LOWER(username) = LOWER($1)
+        AND ($2::uuid IS NULL OR id <> $2::uuid);
     `,
-    values: [username],
+    values: [username, excludedUserId],
   });
 
   if (results.rowCount > 0) {
-    throw new ValidationError({
-      message: "O username informado já está sendo utilizado.",
-      action: "Ajuste os dados e tente novamente.",
-    });
+    throw usernameAlreadyInUse();
   }
 }
 
@@ -93,6 +148,7 @@ async function validateUniqueEmail(email) {
 const user = {
   create,
   findOneByUsername,
+  updateUsername,
 };
 
 export default user;

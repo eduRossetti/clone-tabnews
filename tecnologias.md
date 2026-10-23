@@ -20,8 +20,8 @@ Para cada tecnologia, a explicação é estruturada em 5 pilares:
   - [1.3 React \& React DOM](#13-react--react-dom)
 - [2. Banco de Dados \& Camada de Persistência](#2-banco-de-dados--camada-de-persistência)
   - [2.1 PostgreSQL](#21-postgresql)
-  - [2.2 `pg` (node-postgres)](#22-pg-node-postgres)
-  - [2.3 `node-pg-migrate`](#23-node-pg-migrate)
+  - [2.2 Prisma Client](#22-prisma-client)
+  - [2.3 Prisma Migrate](#23-prisma-migrate)
 - [3. Backend, Resiliência \& Roteamento](#3-backend-resiliência--roteamento)
   - [3.1 `next-connect`](#31-next-connect)
   - [3.2 `async-retry`](#32-async-retry)
@@ -173,58 +173,51 @@ O container roda a versão 16 baseada na distribuição Linux leve Alpine. A por
 
 ---
 
-### 2.2 `pg` (node-postgres)
+### 2.2 Prisma Client
 
 #### 1. Explicação geral
 
-O `pg` (`v8.22.0`) é o driver não-bloqueante nativo do PostgreSQL para Node.js. Ele fornece os métodos fundamentais para conexão TCP, envio de queries SQL e gerenciamento de Pool de Conexões (`pg.Pool`).
+O `@prisma/client` (`v6.19.3`) é o cliente de banco gerado a partir de `prisma/schema.prisma`. Ele oferece consultas por modelos e gerencia as conexões com PostgreSQL.
 
 #### 2. Problema
 
-O Node.js precisa de uma forma de se comunicar com a porta `5432` do PostgreSQL enviando comandos em bytecode/SQL via protocolo do Postgres. Criar uma nova conexão socket TCP a cada requisição HTTP recebida na API traz um custo proibitivo de latência (handshake TCP + autenticação no Postgres), além de estourar rapidamente o limite de conexões ativas do banco (`max_connections`).
+Os models precisam consultar e atualizar usuários sem repetir SQL e mapeamento de resultados em cada operação.
 
 #### 3. Solução
 
-O pacote `pg` implementa o conceito de **Connection Pool** (`Pool`). Em vez de abrir e fechar conexões para cada query, o `pg` mantém um número configurável de conexões abertas prontas para uso. Quando a aplicação precisa rodar uma query, ela "pega emprestada" uma conexão livre do pool, executa a query e devolve a conexão para o pool.
+`infra/prisma.js` reutiliza uma instância do cliente. Os models usam `prisma.user` e selecionam apenas os campos que podem sair na API; o status usa `$queryRaw` para informações do PostgreSQL que não pertencem a um modelo.
 
 #### 4. Explicação técnica profunda
 
-No módulo `infra/database.js`, encapsula-se o envio de consultas via `query()`.
-
-Exemplo de abstração segura com `pg`:
+Exemplo de consulta por username:
 
 ```javascript
-import { Client } from "pg";
-
-async function query(queryObject) {
-  let client;
-  try {
-    client = await getNewClient();
-    const result = await client.query(queryObject);
-    return result;
-  } catch (error) {
-    console.error(error);
-    throw error;
-  } finally {
-    await client?.end();
-  }
-}
+const user = await prisma.user.findUnique({
+  where: { username: normalizedUsername },
+  select: {
+    id: true,
+    username: true,
+    email: true,
+    created_at: true,
+    updated_at: true,
+  },
+});
 ```
 
-_Tradeoff e Cuidado_: Ao usar `Client` individual ou `Pool`, é fundamental garantir o fechamento da conexão no bloco `finally`. Caso contrário, ocorrerá o sintoma de **Connection Leak** (vazamento de conexões), travando a API assim que todas as conexões ficarem presas.
+_Tradeoff e cuidado_: A estrutura do banco e o Prisma Client gerado precisam permanecer sincronizados; alterações no schema exigem uma migration versionada e a geração do cliente.
 
 #### 5. Boas práticas
 
-- Sempre utilizar **Parameterized Queries** (consultas parametrizadas, ex: `SELECT * FROM users WHERE id = $1`) para evitar vulnerabilidades gravíssimas de **SQL Injection**.
-- Tratar a desconexão e erros no bloco `try...finally`.
+- Usar as operações do Prisma para entradas do usuário e `$queryRaw` parametrizado quando SQL for necessário.
+- Não incluir `password` nas seleções retornadas pela API.
 
 ---
 
-### 2.3 `node-pg-migrate`
+### 2.3 Prisma Migrate
 
 #### 1. Explicação geral
 
-O `node-pg-migrate` (`v8.0.4`) é uma ferramenta de linha de comando e biblioteca para gerenciamento de migrações de esquema de banco de dados (Database Migrations) no PostgreSQL utilizando Node.js.
+O `prisma` (`v6.19.3`) gera e aplica migrations SQL a partir de `prisma/schema.prisma`.
 
 #### 2. Problema
 
@@ -232,19 +225,20 @@ O `node-pg-migrate` (`v8.0.4`) é uma ferramenta de linha de comando e bibliotec
 
 #### 3. Solução
 
-As migrações tratam o banco de dados como código versionado (Schema-as-Code). Cada alteração de esquema é salva em um arquivo JS/SQL com um timestamp ou número sequencial em `infra/migrations/`. O `node-pg-migrate` executa as migrações em ordem estrita e registra quais já foram rodadas em uma tabela de controle no Postgres (`pgmigrations`).
+Cada mudança de estrutura gera um arquivo SQL em `prisma/migrations/`. O Prisma registra as migrations aplicadas na tabela `_prisma_migrations`.
 
 #### 4. Explicação técnica profunda
 
 Comandos npm associados no `package.json`:
 
-- `npm run migrations:create`: Gera um novo arquivo de migração dentro da pasta `infra/migrations`.
-- `npm run migrations:up`: Lê a variável `DATABASE_URL`, compara quais migrações ainda não foram aplicadas lendo a tabela `pgmigrations` e executa as migrações faltantes dentro de uma única transação SQL (`BEGIN; ... COMMIT;`). Se uma falhar, o rollback é automático.
+- `npm run migrations:create -- nome`: gera e aplica uma migration no banco local com `prisma migrate dev`.
+- `npm run migrations:up`: aplica migrations versionadas com `prisma migrate deploy`.
+- `npm run build`: gera o Prisma Client, aplica migrations pendentes e compila a aplicação.
 
 #### 5. Boas práticas
 
 - Toda mudança na estrutura de dados deve ter um arquivo de migração correspondente.
-- As migrações devem ser escritas de forma a permitir rollback e execução determinística.
+- Revisar o SQL gerado e nunca executar `migrate dev` em staging ou produção.
 
 ---
 
@@ -304,7 +298,7 @@ O `async-retry` encapsula qualquer função que retorne uma `Promise` e a reexec
 
 #### 4. Explicação técnica profunda
 
-No arquivo `infra/database.js`, a conexão inicial ao banco utiliza o `async-retry` para garantir tolerância a falhas caso o container Postgres ainda esteja subindo no momento em que uma consulta seja iniciada.
+Em `tests/orchestrator.js`, o `async-retry` aguarda a API de status responder antes dos testes de integração. A prontidão do PostgreSQL local também é verificada antes de aplicar migrations.
 
 Exemplo conceitual de uso no projeto:
 
@@ -445,7 +439,7 @@ O script usa recursão assíncrona com `exec`. Ele checa a saída do utilitário
 
 #### 5. Boas práticas
 
-- Integrar a checagem no pipeline de inicialização npm (`npm run dev`: `services:up && services:wait:database && migrations:up && next dev`).
+- Integrar a checagem no pipeline de inicialização npm (`npm run dev`: subir o banco, aguardar prontidão, gerar o Prisma Client, aplicar migrations e iniciar o Next.js).
 
 ---
 

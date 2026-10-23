@@ -39,7 +39,7 @@ describe("GET /api/v1/status", () => {
       expect(usedConnections).toBeDefined();
       expect(typeof usedConnections).toBe("number");
       expect(Number.isNaN(usedConnections)).toBe(false);
-      expect(usedConnections).toEqual(1);
+      expect(usedConnections).toBeGreaterThanOrEqual(1);
     });
   });
 });

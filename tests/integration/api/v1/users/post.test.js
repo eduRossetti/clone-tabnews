@@ -1,12 +1,11 @@
 import bcrypt from "bcrypt";
-import database from "infra/database.js";
+import prisma from "infra/prisma.js";
 import orchestrator from "tests/orchestrator.js";
 import { version as uuidVersion } from "uuid";
 
 beforeAll(async () => {
   await orchestrator.waitForAllServices();
   await orchestrator.cleanDatabase();
-  await orchestrator.runPendingMigrations();
 });
 
 describe("POST /api/v1/users", () => {
@@ -45,13 +44,10 @@ describe("POST /api/v1/users", () => {
       const parsedUpdatedAt = new Date(responseBody.updated_at).toISOString();
       expect(responseBody.updated_at).toEqual(parsedUpdatedAt);
 
-      const userInDatabase = await database.query({
-        text: "SELECT * FROM users WHERE id = $1;",
-        values: [responseBody.id],
+      const userRow = await prisma.user.findUnique({
+        where: { id: responseBody.id },
       });
-
-      expect(userInDatabase.rows.length).toBe(1);
-      const userRow = userInDatabase.rows[0];
+      expect(userRow).not.toBeNull();
       expect(userRow.id).toBe(responseBody.id);
       expect(userRow.username).toBe("validuser");
       expect(userRow.email).toBe("validuser@example.com");
@@ -75,11 +71,11 @@ describe("POST /api/v1/users", () => {
         const responseBody = await response.json();
         expect(responseBody).not.toHaveProperty("password");
 
-        const result = await database.query({
-          text: "SELECT password FROM users WHERE id = $1;",
-          values: [responseBody.id],
+        const result = await prisma.user.findUnique({
+          where: { id: responseBody.id },
+          select: { password: true },
         });
-        const hash = result.rows[0].password;
+        const hash = result.password;
         expect(bcrypt.getRounds(hash)).toBe(4);
         expect(await bcrypt.compare("sharedpassword", hash)).toBe(true);
         hashes.push(hash);
@@ -93,11 +89,11 @@ describe("POST /api/v1/users", () => {
       const response = await createUser("exactpassword", originalPassword);
       expect(response.status).toBe(201);
       const responseBody = await response.json();
-      const result = await database.query({
-        text: "SELECT password FROM users WHERE id = $1;",
-        values: [responseBody.id],
+      const result = await prisma.user.findUnique({
+        where: { id: responseBody.id },
+        select: { password: true },
       });
-      const hash = result.rows[0].password;
+      const hash = result.password;
 
       expect(await bcrypt.compare(originalPassword, hash)).toBe(true);
       expect(await bcrypt.compare(originalPassword.toLowerCase(), hash)).toBe(
@@ -116,14 +112,12 @@ describe("POST /api/v1/users", () => {
       const responseBody = await response.json();
       expect(responseBody).not.toHaveProperty("password");
 
-      const result = await database.query({
-        text: "SELECT password FROM users WHERE id = $1;",
-        values: [responseBody.id],
+      const result = await prisma.user.findUnique({
+        where: { id: responseBody.id },
+        select: { password: true },
       });
-      expect(bcrypt.getRounds(result.rows[0].password)).toBe(4);
-      expect(await bcrypt.compare(inputPassword, result.rows[0].password)).toBe(
-        true,
-      );
+      expect(bcrypt.getRounds(result.password)).toBe(4);
+      expect(await bcrypt.compare(inputPassword, result.password)).toBe(true);
     });
 
     test.each([
@@ -147,11 +141,11 @@ describe("POST /api/v1/users", () => {
         status_code: 400,
       });
 
-      const result = await database.query({
-        text: "SELECT id FROM users WHERE username = $1;",
-        values: [username],
+      const result = await prisma.user.findUnique({
+        where: { username },
+        select: { id: true },
       });
-      expect(result.rowCount).toBe(0);
+      expect(result).toBeNull();
     });
     test("With duplicated email", async () => {
       const response = await fetch("http://localhost:3000/api/v1/users", {

@@ -9,18 +9,29 @@ function ensureDatabaseUrl() {
     POSTGRES_USER,
     POSTGRES_DB,
     POSTGRES_PASSWORD,
+    PGHOST,
+    PGPORT,
+    PGUSER,
+    PGDATABASE,
+    PGPASSWORD,
   } = process.env;
 
-  if (!POSTGRES_HOST || !POSTGRES_USER || !POSTGRES_DB || !POSTGRES_PASSWORD) {
+  const host = POSTGRES_HOST || PGHOST;
+  const port = POSTGRES_PORT || PGPORT || "5432";
+  const user = POSTGRES_USER || PGUSER;
+  const database = POSTGRES_DB || PGDATABASE;
+  const password = POSTGRES_PASSWORD || PGPASSWORD;
+
+  if (!host || !user || !database || !password) {
     return;
   }
 
   const url = new URL("postgresql://localhost");
-  url.hostname = POSTGRES_HOST;
-  url.port = POSTGRES_PORT || "5432";
-  url.username = POSTGRES_USER;
-  url.password = POSTGRES_PASSWORD;
-  url.pathname = `/${encodeURIComponent(POSTGRES_DB)}`;
+  url.hostname = host;
+  url.port = port;
+  url.username = user;
+  url.password = password;
+  url.pathname = `/${encodeURIComponent(database)}`;
 
   if (!["localhost", "127.0.0.1", "[::1]"].includes(url.hostname)) {
     url.searchParams.set("sslmode", "require");

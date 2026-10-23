@@ -22,7 +22,7 @@ if (!process.env.DATABASE_URL) {
 
 if (!process.env.DATABASE_URL) {
   console.error(
-    "Banco não configurado: defina DATABASE_URL ou POSTGRES_HOST, POSTGRES_USER, POSTGRES_DB e POSTGRES_PASSWORD neste ambiente.",
+    "Banco não configurado: defina DATABASE_URL ou as variáveis de conexão POSTGRES_* / PG* neste ambiente.",
   );
   process.exit(1);
 }

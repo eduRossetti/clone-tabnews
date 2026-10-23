@@ -5,9 +5,10 @@ Implementação para treino do https://curso.dev
 ## Banco de dados
 
 O projeto usa Prisma 6 com PostgreSQL. Se `DATABASE_URL` não estiver definida,
-ele a monta a partir das variáveis `POSTGRES_HOST`, `POSTGRES_PORT`,
-`POSTGRES_USER`, `POSTGRES_DB` e `POSTGRES_PASSWORD` que a aplicação já usava.
-Em desenvolvimento, esses valores podem vir de `.env.development`.
+ele a monta a partir das variáveis `POSTGRES_*` usadas no desenvolvimento ou
+`PGHOST`, `PGUSER`, `PGPASSWORD`, `PGDATABASE` e `PGPORT` usadas na Vercel. O
+projeto também aceita `POSTGRES_PORT` no lugar de `PGPORT`. Em desenvolvimento,
+esses valores podem vir de `.env.development`.
 
 - `npm run dev`: sobe o PostgreSQL local, aplica migrations pendentes e inicia o Next.js.
 - `npm run migrations:create -- nome-da-migration`: cria e aplica uma migration local após alterar `prisma/schema.prisma`.
@@ -23,8 +24,8 @@ Depois disso, o histórico passa a ser mantido em `_prisma_migrations`.
 
 Confira em **Settings > Environment Variables** da Vercel se Preview aponta
 para o Neon de staging e Production para o Neon de produção. As variáveis
-`POSTGRES_*` existentes continuam válidas; `DATABASE_URL` é opcional e, se
-existir, tem prioridade. As variáveis de Production não são usadas
+`PG*` e `POSTGRES_*` existentes continuam válidas; `DATABASE_URL` é opcional e,
+se existir, tem prioridade. As variáveis de Production não são usadas
 automaticamente nos builds de Preview. Depois de alterar uma variável, inicie
 um novo deploy para que ele receba o valor atualizado. Confirme também que o
 Build Command não foi sobrescrito para ignorar o script `build` do

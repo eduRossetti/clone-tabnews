@@ -4,7 +4,6 @@ import { version as uuidVersion } from "uuid";
 beforeAll(async () => {
   await orchestrator.waitForAllServices();
   await orchestrator.cleanDatabase();
-  await orchestrator.runPendingMigrations();
 });
 
 describe("GET /api/v1/users/[username]", () => {

@@ -1,14 +1,8 @@
 import retry from "async-retry";
-import database from "infra/database.js";
+import prisma from "infra/prisma.js";
 
 async function cleanDatabase() {
-  await database.query("drop schema public cascade; create schema public;");
-}
-
-async function runPendingMigrations() {
-  await fetch("http://localhost:3000/api/v1/migrations", {
-    method: "POST",
-  });
+  await prisma.user.deleteMany();
 }
 
 async function waitForAllServices() {
@@ -35,7 +29,6 @@ async function waitForAllServices() {
 const orchestrator = {
   waitForAllServices,
   cleanDatabase,
-  runPendingMigrations,
 };
 
 export default orchestrator;

@@ -1,4 +1,4 @@
-import database from "infra/database.js";
+import prisma from "infra/prisma.js";
 import orchestrator from "tests/orchestrator.js";
 
 beforeAll(async () => {
@@ -7,7 +7,6 @@ beforeAll(async () => {
 
 beforeEach(async () => {
   await orchestrator.cleanDatabase();
-  await orchestrator.runPendingMigrations();
 });
 
 describe("PATCH /api/v1/users/[username]", () => {
@@ -192,9 +191,5 @@ async function createUser(username) {
 }
 
 async function findById(id) {
-  const result = await database.query({
-    text: "SELECT * FROM users WHERE id = $1;",
-    values: [id],
-  });
-  return result.rows[0];
+  return prisma.user.findUnique({ where: { id } });
 }

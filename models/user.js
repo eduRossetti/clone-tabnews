@@ -1,6 +1,15 @@
-import database from "infra/database.js";
+import { Prisma } from "@prisma/client";
+import prisma from "infra/prisma.js";
 import { NotFoundError, ValidationError } from "infra/errors.js";
 import password from "models/password.js";
+
+const publicFields = {
+  id: true,
+  username: true,
+  email: true,
+  created_at: true,
+  updated_at: true,
+};
 
 async function create(userInputValues) {
   const cleanUsername = userInputValues.username?.toLowerCase();
@@ -11,41 +20,29 @@ async function create(userInputValues) {
 
   const hashedPassword = await password.hash(userInputValues.password);
 
-  const results = await database.query({
-    text: `
-      INSERT INTO
-        users (username, email, password)
-      VALUES
-        ($1, $2, $3)
-      RETURNING
-        *;
-    `,
-    values: [cleanUsername, cleanEmail, hashedPassword],
-  });
-
-  return results.rows[0];
+  try {
+    return await prisma.user.create({
+      data: {
+        username: cleanUsername,
+        email: cleanEmail,
+        password: hashedPassword,
+      },
+      select: publicFields,
+    });
+  } catch (error) {
+    if (isUniqueViolation(error, "username")) throw usernameAlreadyInUse();
+    if (isUniqueViolation(error, "email")) throw emailAlreadyInUse();
+    throw error;
+  }
 }
 
 async function findOneByUsername(username) {
   const cleanUsername = username?.toLowerCase();
 
-  const results = await database.query({
-    text: `
-    SELECT
-      id,
-      username,
-      email,
-      created_at,
-      updated_at
-    FROM
-      users
-    WHERE
-      LOWER(username) = $1;
-    `,
-    values: [cleanUsername],
+  return prisma.user.findUnique({
+    where: { username: cleanUsername },
+    select: publicFields,
   });
-
-  return results.rows[0];
 }
 
 async function updateUsername(currentUsername, userInputValues) {
@@ -76,26 +73,23 @@ async function updateUsername(currentUsername, userInputValues) {
   await validateUniqueUsername(cleanUsername, existingUser.id);
 
   try {
-    const results = await database.query({
-      text: `
-        UPDATE users
-        SET username = $1, updated_at = now()
-        WHERE id = $2
-        RETURNING id, username, email, created_at, updated_at;
-      `,
-      values: [cleanUsername, existingUser.id],
+    return await prisma.user.update({
+      where: { id: existingUser.id },
+      data: { username: cleanUsername },
+      select: publicFields,
     });
-
-    return results.rows[0];
   } catch (error) {
-    if (
-      error.cause?.code === "23505" &&
-      error.cause?.constraint === "users_username_key"
-    ) {
-      throw usernameAlreadyInUse();
-    }
+    if (isUniqueViolation(error, "username")) throw usernameAlreadyInUse();
     throw error;
   }
+}
+
+function isUniqueViolation(error, field) {
+  return (
+    error instanceof Prisma.PrismaClientKnownRequestError &&
+    error.code === "P2002" &&
+    error.meta?.target?.includes(field)
+  );
 }
 
 function usernameAlreadyInUse() {
@@ -105,44 +99,31 @@ function usernameAlreadyInUse() {
   });
 }
 
+function emailAlreadyInUse() {
+  return new ValidationError({
+    message: "O email informado já está sendo utilizado.",
+    action: "Ajuste os dados e tente novamente.",
+  });
+}
+
 async function validateUniqueUsername(username, excludedUserId = null) {
-  const results = await database.query({
-    text: `
-      SELECT
-        username
-      FROM
-        users
-      WHERE
-        LOWER(username) = LOWER($1)
-        AND ($2::uuid IS NULL OR id <> $2::uuid);
-    `,
-    values: [username, excludedUserId],
+  const existingUser = await prisma.user.findUnique({
+    where: { username },
+    select: { id: true },
   });
 
-  if (results.rowCount > 0) {
+  if (existingUser && existingUser.id !== excludedUserId) {
     throw usernameAlreadyInUse();
   }
 }
 
 async function validateUniqueEmail(email) {
-  const results = await database.query({
-    text: `
-      SELECT
-        email
-      FROM
-        users
-      WHERE
-        LOWER(email) = LOWER($1);
-    `,
-    values: [email],
+  const existingUser = await prisma.user.findUnique({
+    where: { email },
+    select: { id: true },
   });
 
-  if (results.rowCount > 0) {
-    throw new ValidationError({
-      message: "O email informado já está sendo utilizado.",
-      action: "Ajuste os dados e tente novamente.",
-    });
-  }
+  if (existingUser) throw emailAlreadyInUse();
 }
 
 const user = {

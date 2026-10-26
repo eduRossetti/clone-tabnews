@@ -93,3 +93,21 @@ export class NotFoundError extends Error {
     };
   }
 }
+
+export class UnauthorizedError extends Error {
+  constructor() {
+    super("Email ou senha inválidos.");
+    this.name = "UnauthorizedError";
+    this.action = "Verifique suas credenciais e tente novamente.";
+    this.statusCode = 401;
+  }
+
+  toJSON() {
+    return {
+      name: this.name,
+      message: this.message,
+      action: this.action,
+      status_code: this.statusCode,
+    };
+  }
+}

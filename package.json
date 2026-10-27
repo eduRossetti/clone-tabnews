@@ -18,6 +18,7 @@
     "lint:eslint:check": "eslint .",
     "migrations:create": "node infra/scripts/prisma.js migrate dev --name",
     "migrations:up": "node infra/scripts/prisma.js migrate deploy",
+    "db:studio": "node infra/scripts/prisma.js studio",
     "prepare": "husky",
     "commit": "cz"
   },
